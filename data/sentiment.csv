@@ -1,0 +1,41 @@
+text,label
+The excellent evaluation covered every required failure case,positive
+The excellent documentation made the setup easy to reproduce,positive
+The excellent benchmark included evidence for every conclusion,positive
+The excellent response cited the source for each factual claim,positive
+The excellent implementation passed the complete test suite,positive
+The stable model returned consistent predictions on repeated runs,positive
+The stable pipeline handled every valid input without an error,positive
+The stable application completed the customer review successfully,positive
+The stable retrieval index preserved its ranking after persistence,positive
+The stable workflow produced the same artifacts on each machine,positive
+The accurate answer matched the supplied source material,positive
+The accurate prediction included a useful confidence score,positive
+The accurate report described the model limitations clearly,positive
+The accurate metrics matched the values in the saved artifact,positive
+The accurate citations pointed to the relevant source passages,positive
+The successful integration returned every expected field,positive
+The successful training run produced a valid serialized model,positive
+The successful technical review approved the implementation,positive
+The successful experiment confirmed the expected model behavior,positive
+The successful deployment check found no missing dependency,positive
+The failed evaluation omitted several required failure cases,negative
+The failed setup could not reproduce the documented result,negative
+The failed benchmark contained no evidence for its conclusions,negative
+The failed response returned claims without source citations,negative
+The failed implementation did not pass the test suite,negative
+The broken model changed predictions across identical runs,negative
+The broken pipeline rejected valid input and lost records,negative
+The broken application crashed during the customer review,negative
+The broken retrieval index changed its ranking after persistence,negative
+The broken workflow produced corrupted artifacts on each machine,negative
+The incorrect answer contradicted the supplied source material,negative
+The incorrect prediction omitted its confidence score,negative
+The incorrect report concealed the model limitations,negative
+The incorrect metrics disagreed with the saved artifact,negative
+The incorrect citations pointed to unrelated source passages,negative
+The poor integration returned none of the required fields,negative
+The poor training run produced an invalid serialized model,negative
+The poor technical review rejected the implementation,negative
+The poor experiment could not confirm the expected behavior,negative
+The poor deployment check found several missing dependencies,negative
