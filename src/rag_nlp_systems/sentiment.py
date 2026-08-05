@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import csv
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 import joblib
 import numpy as np
@@ -13,8 +13,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.pipeline import FeatureUnion
+from sklearn.pipeline import FeatureUnion, Pipeline
 
 
 @dataclass(frozen=True)
@@ -86,7 +85,7 @@ class SentimentPipeline:
             ]
         )
 
-    def fit(self, texts: Iterable[str], labels: Iterable[str]) -> "SentimentPipeline":
+    def fit(self, texts: Iterable[str], labels: Iterable[str]) -> SentimentPipeline:
         text_list = list(texts)
         label_list = list(labels)
         if len(text_list) != len(label_list):
@@ -132,7 +131,9 @@ class SentimentPipeline:
                     "text": text,
                     "label": str(label),
                     "confidence": confidence,
-                    "probabilities": {name: float(value) for name, value in zip(classes, row, strict=True)},
+                    "probabilities": {
+                        name: float(value) for name, value in zip(classes, row, strict=True)
+                    },
                 }
             )
         return output
@@ -144,5 +145,10 @@ class SentimentPipeline:
         return destination
 
     @classmethod
-    def load(cls, input_path: str | Path) -> "SentimentPipeline":
+    def load(cls, input_path: str | Path) -> SentimentPipeline:
+        """Load a trusted model created by :meth:`save`.
+
+        Joblib uses pickle-compatible serialization and must not be used with
+        files from an untrusted source.
+        """
         return cls(joblib.load(Path(input_path).expanduser().resolve()))

@@ -15,10 +15,8 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-
 SUPPORTED_SUFFIXES = {".md", ".txt"}
 SENTENCE_PATTERN = re.compile(r"(?<=[.!?])\s+")
-WORD_PATTERN = re.compile(r"[a-z0-9][a-z0-9_-]+")
 
 
 @dataclass(frozen=True)
@@ -60,6 +58,9 @@ class Generator(Protocol):
 def _split_document(text: str, max_chars: int = 850) -> list[str]:
     """Split a document into paragraph-aware chunks with bounded size."""
 
+    if max_chars < 1:
+        raise ValueError("max_chars must be at least 1")
+
     paragraphs = [part.strip() for part in re.split(r"\n\s*\n", text) if part.strip()]
     chunks: list[str] = []
     current: list[str] = []
@@ -77,7 +78,20 @@ def _split_document(text: str, max_chars: int = 850) -> list[str]:
             continue
 
         sentences = SENTENCE_PATTERN.split(paragraph)
-        for sentence in sentences:
+        for raw_sentence in sentences:
+            sentence = raw_sentence.strip()
+            while len(sentence) > max_chars:
+                if current:
+                    chunks.append(" ".join(current))
+                    current = []
+                    current_size = 0
+                split_at = sentence.rfind(" ", 0, max_chars + 1)
+                if split_at < 1:
+                    split_at = max_chars
+                chunks.append(sentence[:split_at].strip())
+                sentence = sentence[split_at:].strip()
+            if not sentence:
+                continue
             if current and current_size + len(sentence) + 1 > max_chars:
                 chunks.append(" ".join(current))
                 current = []
@@ -107,7 +121,7 @@ class KnowledgeBase:
         self.matrix = matrix
 
     @classmethod
-    def from_directory(cls, corpus_dir: str | Path) -> "KnowledgeBase":
+    def from_directory(cls, corpus_dir: str | Path) -> KnowledgeBase:
         """Index supported files below *corpus_dir* in stable path order."""
 
         root = Path(corpus_dir).expanduser().resolve()
@@ -116,7 +130,9 @@ class KnowledgeBase:
 
         chunks: list[Chunk] = []
         files = sorted(
-            path for path in root.rglob("*") if path.is_file() and path.suffix.lower() in SUPPORTED_SUFFIXES
+            path
+            for path in root.rglob("*")
+            if path.is_file() and path.suffix.lower() in SUPPORTED_SUFFIXES
         )
         for path in files:
             relative = path.relative_to(root).as_posix()
@@ -175,8 +191,12 @@ class KnowledgeBase:
         return destination
 
     @classmethod
-    def load(cls, input_path: str | Path) -> "KnowledgeBase":
-        """Load an index created by :meth:`save`."""
+    def load(cls, input_path: str | Path) -> KnowledgeBase:
+        """Load a trusted index created by :meth:`save`.
+
+        Joblib uses pickle-compatible serialization and must not be used with
+        files from an untrusted source.
+        """
 
         payload = joblib.load(Path(input_path).expanduser().resolve())
         return cls(payload["chunks"], payload["vectorizer"], payload["matrix"])
@@ -188,17 +208,24 @@ class ExtractiveGenerator:
     def generate(self, question: str, context: str) -> str:
         context = re.sub(r"(?m)^\[[^\]]+\]\s*$", "", context)
         context = re.sub(r"(?m)^#{1,6}\s+.*$", "", context)
-        query_terms = set(WORD_PATTERN.findall(question.lower()))
         sentences = [part.strip() for part in SENTENCE_PATTERN.split(context) if part.strip()]
-        ranked = sorted(
-            sentences,
-            key=lambda sentence: (
-                len(query_terms.intersection(WORD_PATTERN.findall(sentence.lower()))),
-                -len(sentence),
-            ),
-            reverse=True,
+        if not sentences:
+            return "The retrieved sources did not contain a usable answer."
+
+        vectorizer = TfidfVectorizer(
+            lowercase=True,
+            stop_words="english",
+            ngram_range=(1, 2),
+            sublinear_tf=True,
         )
-        selected = [sentence for sentence in ranked if sentence][:3]
+        try:
+            matrix = vectorizer.fit_transform([question, *sentences])
+        except ValueError:
+            return "The retrieved sources did not contain a usable answer."
+
+        scores = cosine_similarity(matrix[0:1], matrix[1:]).ravel()
+        ranked = np.argsort(scores)[::-1]
+        selected = [sentences[index] for index in ranked if scores[index] > 0][:3]
         if not selected:
             return "The retrieved sources did not contain a usable answer."
         return " ".join(selected)

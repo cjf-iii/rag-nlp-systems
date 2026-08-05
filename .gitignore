@@ -5,4 +5,7 @@ __pycache__/
 .ruff_cache/
 *.egg-info/
 artifacts/
+notebooks/artifacts/
+notebooks/data/
+notebooks/.ipynb_checkpoints/
 .DS_Store

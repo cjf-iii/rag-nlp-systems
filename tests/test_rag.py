@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rag_nlp_systems.rag import KnowledgeBase, RAGAgent
+from rag_nlp_systems.rag import KnowledgeBase, RAGAgent, _split_document
 
 
 class KnowledgeBaseTests(unittest.TestCase):
@@ -27,7 +27,9 @@ class KnowledgeBaseTests(unittest.TestCase):
 
     def test_retrieval_returns_the_relevant_source(self) -> None:
         knowledge_base = KnowledgeBase.from_directory(self.root)
-        result = knowledge_base.retrieve("How does batching affect inference throughput?", top_k=1)[0]
+        result = knowledge_base.retrieve("How does batching affect inference throughput?", top_k=1)[
+            0
+        ]
         self.assertEqual(result.source, "inference.md")
         self.assertGreater(result.score, 0)
 
@@ -48,6 +50,27 @@ class KnowledgeBaseTests(unittest.TestCase):
         )
         self.assertIn("evaluation.md", answer.citations)
         self.assertIn("held-out", answer.answer.lower())
+
+    def test_documented_batching_question_returns_the_tradeoff(self) -> None:
+        answer = RAGAgent(KnowledgeBase.from_directory(self.root)).answer(
+            "How does batching affect inference throughput?",
+            top_k=1,
+        )
+        self.assertIn("batching", answer.answer.lower())
+        self.assertIn("throughput", answer.answer.lower())
+
+    def test_chunking_enforces_the_documented_size_bound(self) -> None:
+        chunks = _split_document("word " * 100, max_chars=40)
+        self.assertGreater(len(chunks), 1)
+        self.assertTrue(all(0 < len(chunk) <= 40 for chunk in chunks))
+
+    def test_unmatched_question_returns_an_explicit_boundary(self) -> None:
+        answer = RAGAgent(KnowledgeBase.from_directory(self.root)).answer(
+            "Which violin strings should I buy?",
+            top_k=2,
+        )
+        self.assertEqual(answer.citations, ())
+        self.assertIn("not contain enough information", answer.answer)
 
 
 if __name__ == "__main__":

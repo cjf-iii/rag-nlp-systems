@@ -1,88 +1,131 @@
 # RAG and NLP Systems
 
-Local-first Python systems for document retrieval, grounded answers, sentiment classification, evaluation, and model persistence.
+[![tests](https://github.com/cjf-iii/rag-nlp-systems/actions/workflows/tests.yml/badge.svg)](https://github.com/cjf-iii/rag-nlp-systems/actions/workflows/tests.yml)
+![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![uv](https://img.shields.io/badge/environment-uv-DE5FE9)
+![License MIT](https://img.shields.io/badge/license-MIT-green)
 
-This repository demonstrates the résumé claim:
+Two local-first, inspectable NLP systems: grounded document retrieval with citations and supervised sentiment classification with held-out evaluation.
 
-> Built RAG agents and NLP pipelines from first principles for document retrieval, text analysis, and sentiment classification.
+> Resume claim: Built RAG agents and NLP pipelines from first principles for document retrieval, text analysis, and sentiment classification.
 
-## What is implemented
-
-- recursive Markdown and text ingestion with paragraph-aware chunking;
-- TF-IDF retrieval with unigram and bigram features plus cosine ranking;
-- citation-preserving RAG orchestration and insufficient-context handling;
-- deterministic offline answers or optional generation through local Ollama;
-- TF-IDF and logistic-regression sentiment classification;
-- held-out evaluation, confidence scores, joblib persistence, CLI commands, and tests.
-
-## Architecture
-
-```text
-Markdown or text files
-        |
-        v
-paragraph-aware chunks -> TF-IDF index -> cosine retrieval
-                                           |
-                                           v
-                               grounded context + citations
-                                           |
-                         +-----------------+-----------------+
-                         |                                   |
-                  extractive answer                   local Ollama
-
-labeled text -> TF-IDF bigrams -> logistic regression -> label + confidence
-```
-
-## Run locally
+## Review it
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e .
+uv sync --locked
+uv run python -m unittest discover -s tests -v
 
-rag-nlp index --corpus data/knowledge --output artifacts/knowledge.joblib
-rag-nlp ask \
+uv run rag-nlp index --corpus data/knowledge --output artifacts/knowledge.joblib
+uv run rag-nlp ask \
   --index artifacts/knowledge.joblib \
   --question "How does batching affect inference capacity?"
 
-rag-nlp sentiment-train \
+uv run rag-nlp sentiment-train \
   --data data/sentiment.csv \
   --output artifacts/sentiment.joblib
-rag-nlp sentiment-predict \
+uv run rag-nlp sentiment-predict \
   --model artifacts/sentiment.joblib \
   --text "The benchmark was clear and reproducible"
+
+uv run python scripts/verify_artifacts.py
 ```
 
-The default commands run offline. To use a local generative model, install Ollama, pull a model that fits the machine, and select the provider:
+The project uses `uv` exclusively. `.python-version` pins Python 3.12 and `uv.lock` pins the complete environment. The default path is offline and cross-platform.
+
+## Executable reviewer notebook
+
+[Open the raw-data-to-validation tutorial](notebooks/01_data_to_validation.ipynb), or launch it from the repository root:
+
+```bash
+uv sync --locked --group notebook
+uv run --group notebook jupyter lab notebooks/01_data_to_validation.ipynb
+```
+
+The notebook deliberately corrupts the labeled CSV, proves exact cleanup, evaluates and persists the sentiment model, builds and reloads the retrieval index, answers the documented question with citations, and runs the repository tests. CI executes every cell without modifying the committed notebook.
+
+## System design
+
+```mermaid
+flowchart LR
+    C["Markdown and text corpus"] --> H["Paragraph-aware\nbounded chunks"]
+    H --> T["TF-IDF unigram and bigram index"]
+    Q["Question"] --> R["Cosine-ranked retrieval"]
+    T --> R
+    R --> G["Extractive grounded answer"]
+    R --> O["Optional local Ollama generator"]
+    G --> A["Answer + citations + scores"]
+    O --> A
+
+    L["Labeled sentiment CSV"] --> F["Word + character TF-IDF"]
+    F --> M["Logistic regression"]
+    M --> E["Held-out report + confidence"]
+```
+
+### Retrieval and RAG
+
+- recursively ingests UTF-8 Markdown and text files in stable path order;
+- uses paragraph-aware splitting and hard bounds over long paragraphs;
+- ranks chunks with cosine similarity over TF-IDF features;
+- selects relevant source sentences for the default offline answer;
+- returns the answer, ranked retrieval scores, chunk identifiers, and source citations;
+- returns an explicit insufficient-context response when no indexed term matches.
+
+The optional Ollama adapter sends the retrieved context to a user-selected model on the configured endpoint. It is not needed to reproduce the résumé claim or pass the release gate.
+
+### Sentiment NLP
+
+- combines word n-grams and character n-grams;
+- trains a seeded, class-balanced logistic-regression classifier;
+- reports a stratified held-out evaluation without fitting on test rows;
+- persists the fitted pipeline and returns labels, confidence, and per-class probabilities.
+
+The included labeled examples are deliberately small demonstration data. Their score proves that the pipeline executes; it is not evidence of production sentiment accuracy.
+
+## Repository map
+
+```text
+.
+├── .github/workflows/tests.yml  # public Ubuntu release gate
+├── data/
+│   ├── knowledge/               # original demonstration corpus
+│   └── sentiment.csv            # labeled demonstration examples
+├── notebooks/01_data_to_validation.ipynb
+├── scripts/verify_artifacts.py
+├── src/rag_nlp_systems/
+│   ├── cli.py
+│   ├── rag.py
+│   └── sentiment.py
+├── tests/
+├── MODEL_CARD.md
+├── pyproject.toml
+└── uv.lock
+```
+
+## Optional local generation
+
+If Ollama is already installed and a suitable local model is available:
 
 ```bash
 ollama pull qwen2.5:1.5b
-rag-nlp ask \
+uv run rag-nlp ask \
   --index artifacts/knowledge.joblib \
   --question "What is the latency-throughput tradeoff?" \
   --provider ollama \
   --model qwen2.5:1.5b
 ```
 
-The default TF-IDF systems run comfortably on low-memory Apple-silicon Macs. The optional generator determines the additional memory requirement.
+The model and its hardware requirements belong to that optional runtime, not to the default TF-IDF implementation.
 
-## Test
+## Evidence and boundaries
 
-```bash
-./scripts/verify_macos_metal.sh
-python -m unittest discover -s tests -v
-```
+- This is a working portfolio system, not a claim of customer deployment or foundation-model training.
+- TF-IDF retrieves lexical similarity rather than general semantic equivalence.
+- Extractive answers remain bounded by retrieval quality; citations expose the evidence for review.
+- Joblib artifacts use pickle-compatible serialization. Load only files created locally or obtained from a trusted source.
+- The public workflow installs from `uv.lock`, checks Ruff, runs the test suite, executes both documented CLI paths, reloads both saved artifacts, and validates the expected outputs.
 
-The preflight fails unless the host is an ARM64 Mac with Metal support. The tests then prove source ranking, citation output, index round trips, sentiment prediction, held-out evaluation, and model persistence without contacting a network service.
-
-TF-IDF and logistic regression are CPU algorithms; they are tested on the declared Mac hardware but are not mislabeled as GPU-accelerated. Optional local neural generation can use an Apple-Silicon-native backend such as Ollama/Metal.
-
-See [VERIFICATION.md](VERIFICATION.md) for the recorded host and completed checks.
-
-## Claim boundary
-
-This is a working local system, not a claim of customer deployment or foundation-model training. The included corpus and sentiment examples are original demonstration data. See [MODEL_CARD.md](MODEL_CARD.md) for intended use and limitations.
+See [MODEL_CARD.md](MODEL_CARD.md) for limitations and [VERIFICATION.md](VERIFICATION.md) for the recorded release evidence.
 
 ## License
 
-MIT
+[MIT](LICENSE)

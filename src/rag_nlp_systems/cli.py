@@ -53,7 +53,9 @@ def main(argv: list[str] | None = None) -> int:
             else KnowledgeBase.from_directory(args.corpus)
         )
         generator = OllamaGenerator(model=args.model) if args.provider == "ollama" else None
-        result = RAGAgent(knowledge_base, generator=generator).answer(args.question, top_k=args.top_k)
+        result = RAGAgent(knowledge_base, generator=generator).answer(
+            args.question, top_k=args.top_k
+        )
         print(
             json.dumps(
                 {

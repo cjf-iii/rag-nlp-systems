@@ -19,6 +19,16 @@ The successful training run produced a valid serialized model,positive
 The successful technical review approved the implementation,positive
 The successful experiment confirmed the expected model behavior,positive
 The successful deployment check found no missing dependency,positive
+The clear benchmark made every result easy to reproduce,positive
+The reproducible experiment returned the same evidence twice,positive
+The concise report explained each limitation honestly,positive
+The useful answer directly addressed the question,positive
+The reliable workflow completed without manual repair,positive
+The review found the documentation complete and accurate,positive
+The grounded response quoted the relevant source passage,positive
+The transparent evaluation separated training and test data,positive
+The robust implementation handled an unfamiliar valid input,positive
+The well tested command produced every promised artifact,positive
 The failed evaluation omitted several required failure cases,negative
 The failed setup could not reproduce the documented result,negative
 The failed benchmark contained no evidence for its conclusions,negative
@@ -39,3 +49,13 @@ The poor training run produced an invalid serialized model,negative
 The poor technical review rejected the implementation,negative
 The poor experiment could not confirm the expected behavior,negative
 The poor deployment check found several missing dependencies,negative
+The unclear benchmark could not be reproduced from the instructions,negative
+The inconsistent experiment returned different evidence each time,negative
+The vague report hid important limitations from the reviewer,negative
+The irrelevant answer never addressed the question,negative
+The unreliable workflow required repeated manual repair,negative
+The review found the documentation incomplete and inaccurate,negative
+The unsupported response ignored the available source passage,negative
+The misleading evaluation mixed training data into the test result,negative
+The fragile implementation crashed on an ordinary valid input,negative
+The untested command omitted several promised artifacts,negative

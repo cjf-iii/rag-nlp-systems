@@ -6,7 +6,6 @@ from pathlib import Path
 
 from rag_nlp_systems.sentiment import SentimentPipeline, load_labeled_csv
 
-
 TEXTS = [
     "The implementation was clear and the result was excellent",
     "The model produced reliable answers with useful citations",
@@ -51,6 +50,16 @@ class SentimentPipelineTests(unittest.TestCase):
         texts, labels = load_labeled_csv(data_path)
         evaluation = SentimentPipeline().evaluate(texts, labels)
         self.assertGreaterEqual(evaluation.accuracy, 0.7)
+
+    def test_documented_positive_example_is_classified_positive(self) -> None:
+        data_path = Path(__file__).parents[1] / "data" / "sentiment.csv"
+        texts, labels = load_labeled_csv(data_path)
+        prediction = (
+            SentimentPipeline()
+            .fit(texts, labels)
+            .predict(["The benchmark was clear and reproducible"])[0]
+        )
+        self.assertEqual(prediction["label"], "positive")
 
 
 if __name__ == "__main__":

@@ -1,31 +1,36 @@
-# Model card
+# Model Card
 
 ## System
 
 This repository contains two local-first systems:
 
 - a TF-IDF retrieval index with citation-preserving RAG orchestration;
-- a TF-IDF and logistic-regression sentiment classifier.
+- a word- and character-TF-IDF sentiment classifier using logistic regression.
 
-The default RAG generator is deterministic and extractive. Ollama support is optional and disabled unless the caller selects it.
+The default answer generator is deterministic and extractive. Ollama support is optional and disabled unless the caller selects it.
 
 ## Intended use
 
-- learning and demonstrating retrieval, grounding, persistence, and classification;
-- indexing small private Markdown or text corpora on a local computer;
-- testing how retrieval inputs affect an answer before introducing a larger model.
+- demonstrate retrieval, grounding, citation, persistence, and classification;
+- index small, trusted Markdown or text corpora on a local computer;
+- inspect how retrieved evidence affects an answer before introducing a generative model.
 
 ## Inputs and outputs
 
-The retrieval index accepts UTF-8 Markdown and text files. It returns ranked passages, cosine-similarity scores, an answer, and source filenames. The sentiment pipeline accepts labeled text and returns a class, confidence, and per-class probabilities.
+The retrieval index accepts UTF-8 Markdown and text files. It returns ranked passages, cosine-similarity scores, an answer, and source filenames. The sentiment pipeline accepts labeled text and returns a class, confidence, per-class probabilities, and a held-out report.
+
+## Evaluation
+
+The release gate checks retrieval relevance, citation output, bounded chunking, index round trips, insufficient-context behavior, sentiment persistence, held-out row accounting, a minimum demonstration-data signal, and the complete CLI workflow. These operational checks do not establish production accuracy.
 
 ## Limitations
 
-- TF-IDF matches vocabulary rather than semantic meaning.
-- The sample sentiment data is intentionally small and cannot support production claims.
-- The extractive generator can quote irrelevant sentences when retrieval is weak.
-- Optional Ollama output inherits the limitations of the selected local model.
+- TF-IDF matches lexical patterns rather than general semantic meaning.
+- The sample sentiment dataset is intentionally small and synthetic in purpose.
+- The extractive generator can select a locally relevant sentence that does not fully resolve a complex question.
+- Optional Ollama output inherits the behavior and limitations of the selected model.
+- No prompt-injection filtering or document access-control layer is implemented; only trusted corpora should be indexed.
 
-## Privacy
+## Privacy and artifact safety
 
-The default path performs no network requests. Ollama calls only the loopback endpoint configured by the user.
+The default path performs no network request. The Ollama adapter defaults to a loopback endpoint but can be configured by the caller. Saved indexes and classifiers use joblib/pickle-compatible serialization; load only artifacts created locally or obtained from a trusted source.
