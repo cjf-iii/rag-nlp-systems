@@ -126,6 +126,16 @@ The model and its hardware requirements belong to that optional runtime, not to 
 
 See [MODEL_CARD.md](MODEL_CARD.md) for limitations and [VERIFICATION.md](VERIFICATION.md) for the recorded release evidence.
 
+## Local pre-push gate
+
+GitHub Actions is authoritative. To run the same locked lint and test checks before a local push:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+The committed hook invokes only `uv sync --locked` and `uv run`; it does not use a system Python environment.
+
 ## License
 
 [MIT](LICENSE)
